@@ -29,9 +29,8 @@ private val translations: Map<String, List<String>> = mapOf(
     "ru" to RU_STRINGS
 )
 
-@Composable
 fun uiText(key: UiText, vararg args: Any): String {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = Locale.getDefault()
     val language = locale.language.lowercase(Locale.ROOT)
     val selected = translations[language] ?: EN_STRINGS
     val template = selected.getOrElse(key.ordinal) { EN_STRINGS[key.ordinal] }
