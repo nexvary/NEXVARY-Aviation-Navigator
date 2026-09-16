@@ -37,13 +37,20 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Initialize CodeQL
+      - name: Android lint, tests and build
+        run: gradle --no-daemon :app:lintDebug :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Verify hardened Android manifest
+        run: |
+          grep -q 'android:allowBackup="false"' app/src/main/AndroidManifest.xml
+          grep -q 'android:usesCleartextTraffic="false"' app/src/main/AndroidManifest.xml
+          grep -q 'android:supportsRtl="true"' app/src/main/AndroidManifest.xml
+
+      - name: Initialize CodeQL buildless analysis
         uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
-
-      - name: Android lint, tests and build
-        run: gradle --no-daemon :app:lintDebug :app:testDebugUnitTest :app:assembleDebug --stacktrace
+          build-mode: none
 
       - name: Analyze with CodeQL
         uses: github/codeql-action/analyze@v4
