@@ -2,6 +2,7 @@ package com.nexvary.aviationnavigator
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
@@ -19,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.nexvary.aviationnavigator.data.AdsbLolProvider
 import com.nexvary.aviationnavigator.domain.AircraftTrack
+import com.nexvary.aviationnavigator.domain.FlightPlanDraft
 import com.nexvary.aviationnavigator.domain.TrafficQuery
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -89,18 +94,26 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() { mapView?.onDestroy(); mapView = null; super.onDestroy() }
 }
 
-private enum class AppSection(val label: String) {
-    MAP("MAP"), PLAN("PLAN"), RADAR("RADAR"), TRAFFIC("TRAFFIC")
+private enum class AppSection(val label: String, val glyph: String) {
+    HOME("HOME", "H"),
+    MAP("MAP", "M"),
+    PLAN("PLAN", "P"),
+    RADAR("RADAR", "R"),
+    TRAFFIC("TRAFFIC", "T")
 }
 
 @Composable
 private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
     val provider = remember { AdsbLolProvider() }
     val scope = rememberCoroutineScope()
-    var selected by rememberSaveable { mutableStateOf(AppSection.MAP) }
+    var selected by rememberSaveable { mutableStateOf(AppSection.HOME) }
     var tracks by remember { mutableStateOf<List<AircraftTrack>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connecting to live traffic…") }
+
+    BackHandler(enabled = selected != AppSection.HOME) {
+        selected = AppSection.HOME
+    }
 
     fun refresh() {
         if (loading) return
@@ -110,7 +123,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
                 TrafficQuery(DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_RADIUS_NM)
             ).onSuccess {
                 tracks = it
-                status = "${it.size} aircraft · ADSB.lol"
+                status = "${it.size} aircraft · ADSB.lol · Cairo FIR view"
             }.onFailure {
                 status = "Live traffic unavailable: ${it.message ?: "unknown error"}"
             }
@@ -130,7 +143,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
                         onClick = { selected = section },
                         icon = {
                             Text(
-                                section.label.take(1),
+                                section.glyph,
                                 color = if (selected == section) RoyalGold else MetallicSilver,
                                 fontWeight = FontWeight.Bold
                             )
@@ -154,6 +167,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
         ) {
             StatusHeader(status, loading, ::refresh)
             when (selected) {
+                AppSection.HOME -> DashboardScreen(Modifier.weight(1f), tracks) { selected = it }
                 AppSection.MAP -> LiveMapScreen(Modifier.weight(1f), tracks, onMapViewReady)
                 AppSection.PLAN -> FlightPlanScreen(Modifier.weight(1f))
                 AppSection.RADAR -> RadarScreen(Modifier.weight(1f), tracks)
@@ -200,6 +214,116 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
 }
 
 @Composable
+private fun DashboardScreen(
+    modifier: Modifier,
+    tracks: List<AircraftTrack>,
+    navigate: (AppSection) -> Unit
+) {
+    val airborne = tracks.count { !it.onGround }
+    val ground = tracks.count { it.onGround }
+    val highest = tracks.maxByOrNull { it.altitudeFeet ?: Int.MIN_VALUE }
+    val fastest = tracks.maxByOrNull { it.groundSpeedKnots ?: Int.MIN_VALUE }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(
+            "AVIATION WORKSPACE",
+            color = Platinum,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Live traffic, map, radar and flight planning in one mobile workspace.",
+            color = MetallicSilver
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatCard("TRACKED", tracks.size.toString(), Modifier.weight(1f))
+            StatCard("AIRBORNE", airborne.toString(), Modifier.weight(1f))
+            StatCard("GROUND", ground.toString(), Modifier.weight(1f))
+        }
+
+        if (highest != null || fastest != null) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = PanelBlack),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("LIVE HIGHLIGHTS", color = RoyalGold, fontWeight = FontWeight.Bold)
+                    highest?.let {
+                        Text("Highest: ${it.displayIdentity} · ${it.altitudeFeet ?: 0} ft", color = Platinum)
+                    }
+                    fastest?.let {
+                        Text("Fastest: ${it.displayIdentity} · ${it.groundSpeedKnots ?: 0} kt", color = Platinum)
+                    }
+                }
+            }
+        }
+
+        Text("QUICK ACCESS", color = RoyalGold, fontWeight = FontWeight.Bold)
+        QuickAction("LIVE MAP", "MapLibre + live ADS-B aircraft") { navigate(AppSection.MAP) }
+        QuickAction("FLIGHT PLAN", "Build and validate an ICAO route draft") { navigate(AppSection.PLAN) }
+        QuickAction("RADAR", "250 NM situational traffic scope") { navigate(AppSection.RADAR) }
+        QuickAction("TRAFFIC", "Inspect callsign, altitude and speed") { navigate(AppSection.TRAFFIC) }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = PanelBlack),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("ABOUT", color = RoyalGold, fontWeight = FontWeight.Bold)
+                Text("Version ${BuildConfig.VERSION_NAME}", color = Platinum)
+                Text(
+                    "Designed for planning, simulation and situational awareness. Not certified for primary navigation, ATC separation or collision avoidance.",
+                    color = MetallicSilver
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(label: String, value: String, modifier: Modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = PanelBlack),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(label, color = MetallicSilver, style = MaterialTheme.typography.labelSmall)
+            Text(value, color = RoyalGold, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun QuickAction(title: String, subtitle: String, onClick: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = PanelBlack),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Platinum, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = MetallicSilver, style = MaterialTheme.typography.bodySmall)
+            }
+            Button(
+                onClick = onClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Gunmetal, contentColor = Platinum)
+            ) { Text("OPEN") }
+        }
+    }
+}
+
+@Composable
 private fun LiveMapScreen(
     modifier: Modifier,
     tracks: List<AircraftTrack>,
@@ -216,7 +340,7 @@ private fun LiveMapScreen(
                 Text("LIVE AIRSPACE", color = RoyalGold, fontWeight = FontWeight.Bold)
                 Text("Radius $DEFAULT_RADIUS_NM NM", color = MetallicSilver)
                 Text("Tracked ${tracks.size}", color = Platinum)
-                Text("Live ADS-B aircraft are plotted on the map", color = ElectricBlue)
+                Text("Live ADS-B aircraft plotted on MapLibre", color = ElectricBlue)
             }
         }
     }
@@ -252,28 +376,97 @@ private fun MapLibreSurface(
         factory = { mapView },
         modifier = modifier,
         update = {
-            mapHolder[0]?.let { map ->
-                updateAircraftLayer(map, tracks)
-            }
+            mapHolder[0]?.let { map -> updateAircraftLayer(map, tracks) }
         }
     )
 }
 
 @Composable
 private fun FlightPlanScreen(modifier: Modifier) {
+    var departure by rememberSaveable { mutableStateOf("HECA") }
+    var destination by rememberSaveable { mutableStateOf("HESH") }
+    var altitude by rememberSaveable { mutableStateOf("35000") }
+    var route by rememberSaveable { mutableStateOf("DCT") }
+    var result by rememberSaveable { mutableStateOf("Ready to validate a route draft") }
+    var valid by rememberSaveable { mutableStateOf(false) }
+
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionTitle("FLIGHT PLANNER")
-        FeatureCard("ROUTE", "Departure → Airways → Arrival")
-        FeatureCard("PROCEDURES", "SID / STAR / Approach data layer")
-        FeatureCard("VERTICAL PROFILE", "TOC / Cruise / TOD / altitude constraints")
-        FeatureCard("PERFORMANCE", "Aircraft profile, time and fuel model")
         Text(
-            "Planner engine foundation is reserved for the next implementation slice; live tracking is already wired independently so route planning will not depend on a traffic provider.",
+            "Create a basic ICAO route draft. Navigation database, procedures and performance calculations will plug into this engine next.",
             color = MetallicSilver
         )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(
+                value = departure,
+                onValueChange = { departure = it.take(4) },
+                label = { Text("Departure ICAO") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = destination,
+                onValueChange = { destination = it.take(4) },
+                label = { Text("Destination ICAO") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        OutlinedTextField(
+            value = altitude,
+            onValueChange = { altitude = it.filter(Char::isDigit).take(5) },
+            label = { Text("Cruise altitude ft") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = route,
+            onValueChange = { route = it },
+            label = { Text("Route / Airways") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2
+        )
+
+        Button(
+            onClick = {
+                val plan = FlightPlanDraft(
+                    departure = departure,
+                    destination = destination,
+                    cruiseAltitudeFeet = altitude.toIntOrNull() ?: 0,
+                    route = route
+                )
+                val errors = plan.validate()
+                valid = errors.isEmpty()
+                result = if (valid) plan.summary else errors.joinToString("\n")
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalGold, contentColor = Color.Black)
+        ) {
+            Text("VALIDATE PLAN", fontWeight = FontWeight.Bold)
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = if (valid) SafePanel else PanelBlack),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(if (valid) "PLAN VALID" else "PLAN STATUS", color = if (valid) SafeGreen else RoyalGold, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text(result, color = Platinum)
+            }
+        }
+
+        FeatureCard("NEXT NAV LAYER", "Airport/runway database, waypoints, VOR/NDB and airways")
+        FeatureCard("PROCEDURES", "SID / STAR / Approach selection")
+        FeatureCard("PERFORMANCE", "Aircraft profile, fuel, time, TOC/TOD and vertical profile")
     }
 }
 
@@ -406,6 +599,8 @@ private val MetallicSilver = Color(0xFF9E9B98)
 private val Platinum = Color(0xFFF2F2F2)
 private val RoyalGold = Color(0xFFD4AF37)
 private val ElectricBlue = Color(0xFF6A88A0)
+private val SafeGreen = Color(0xFF7FD49A)
+private val SafePanel = Color(0xFF102219)
 
 @Composable
 private fun NexvaryAviationTheme(content: @Composable () -> Unit) {
