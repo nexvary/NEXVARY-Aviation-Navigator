@@ -20,7 +20,7 @@ class RouteEngineTest {
         assertEquals("HESH", solution.destination.normalizedIcao)
         assertTrue(solution.distanceNauticalMiles in 200.0..206.0)
         assertTrue(solution.initialBearingDegrees in 126.0..131.0)
-        assertTrue(solution.estimatedMinutes in 26..28)
+        assertTrue(solution.estimatedMinutes?.let { it in 26..28 } == true)
     }
 
     @Test
