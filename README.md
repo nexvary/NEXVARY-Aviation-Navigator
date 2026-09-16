@@ -18,22 +18,24 @@ The project is designed as a mobile aviation workspace rather than a simple airc
 - Simulator connectivity for MSFS / X-Plane
 - Offline-capable map/navigation layers where licensing permits
 
-## Current 0.1.x foundation
+## Current 0.2.0 application
 
-The first verified development slice includes:
+The current verified development line now includes:
 
-- Jetpack Compose Android application shell
-- MapLibre map centered on the initial operational area
+- Jetpack Compose Android application
+- Deep-black / royal-gold aviation dashboard
+- Home dashboard with tracked, airborne and ground traffic statistics
+- MapLibre map with live ADS-B aircraft GeoJSON layer
 - Live ADSB.lol provider adapter
-- OpenSky provider adapter prepared behind a common contract
+- OpenSky provider adapter behind a common contract
 - Normalized `AircraftTrack` model
 - Multi-provider repository with ICAO24 deduplication logic
-- Live aircraft GeoJSON layer on the MapLibre map
 - Live radar view
-- Live traffic list
-- Flight-planner workspace shell
-- Unit tests and GitHub Actions build gate
-- Debug APK artifact produced by successful CI runs
+- Live traffic list with callsign, altitude and speed
+- Functional flight-plan draft form with ICAO and altitude validation
+- Android back behavior that returns internal sections to Home before exit
+- Unit tests for aircraft presentation and flight-plan validation
+- GitHub Actions build gate and debug APK artifact
 
 ## Architecture
 
