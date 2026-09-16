@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.nexvary.aviationnavigator"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.nexvary.aviationnavigator"
