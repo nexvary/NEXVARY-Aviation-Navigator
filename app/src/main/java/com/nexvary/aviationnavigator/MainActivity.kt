@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +58,7 @@ import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import kotlin.math.cos
 
@@ -204,7 +206,7 @@ private fun LiveMapScreen(
     onMapViewReady: (MapView) -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        MapLibreSurface(Modifier.fillMaxSize(), onMapViewReady)
+        MapLibreSurface(Modifier.fillMaxSize(), tracks, onMapViewReady)
         Card(
             modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
             colors = CardDefaults.cardColors(containerColor = PanelBlack.copy(alpha = 0.92f)),
@@ -214,20 +216,29 @@ private fun LiveMapScreen(
                 Text("LIVE AIRSPACE", color = RoyalGold, fontWeight = FontWeight.Bold)
                 Text("Radius $DEFAULT_RADIUS_NM NM", color = MetallicSilver)
                 Text("Tracked ${tracks.size}", color = Platinum)
-                Text("Aircraft markers are the next map layer", color = ElectricBlue)
+                Text("Live ADS-B aircraft are plotted on the map", color = ElectricBlue)
             }
         }
     }
 }
 
 @Composable
-private fun MapLibreSurface(modifier: Modifier, onMapViewReady: (MapView) -> Unit) {
+private fun MapLibreSurface(
+    modifier: Modifier,
+    tracks: List<AircraftTrack>,
+    onMapViewReady: (MapView) -> Unit
+) {
     val context = LocalContext.current
+    val latestTracks = rememberUpdatedState(tracks)
+    val mapHolder = remember { arrayOfNulls<MapLibreMap>(1) }
     val mapView = remember {
         MapView(context).apply {
             onCreate(null)
             getMapAsync { map ->
-                map.setStyle("https://demotiles.maplibre.org/style.json")
+                mapHolder[0] = map
+                map.setStyle("https://demotiles.maplibre.org/style.json") { style ->
+                    installAircraftLayer(style, latestTracks.value)
+                }
                 map.cameraPosition = CameraPosition.Builder()
                     .target(LatLng(DEFAULT_LATITUDE, DEFAULT_LONGITUDE))
                     .zoom(4.8)
@@ -236,7 +247,16 @@ private fun MapLibreSurface(modifier: Modifier, onMapViewReady: (MapView) -> Uni
             onMapViewReady(this)
         }
     }
-    AndroidView(factory = { mapView }, modifier = modifier)
+
+    AndroidView(
+        factory = { mapView },
+        modifier = modifier,
+        update = {
+            mapHolder[0]?.let { map ->
+                updateAircraftLayer(map, tracks)
+            }
+        }
+    )
 }
 
 @Composable
