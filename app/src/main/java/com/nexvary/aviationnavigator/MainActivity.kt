@@ -659,7 +659,6 @@ private fun FlightPlanScreen(modifier: Modifier, onBack: () -> Unit) {
     }
 }
 
-@Composable
 private fun localizedValidationError(error: String): String = when (error) {
     "Departure must be a 4-letter ICAO code" -> uiText(UiText.ERROR_DEPARTURE_ICAO)
     "Destination must be a 4-letter ICAO code" -> uiText(UiText.ERROR_DESTINATION_ICAO)
