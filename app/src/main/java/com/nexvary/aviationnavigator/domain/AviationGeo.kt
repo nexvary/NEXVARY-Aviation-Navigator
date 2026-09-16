@@ -22,6 +22,18 @@ data class AirportDistance(
     val initialBearingDegrees: Double
 )
 
+data class NavaidDistance(
+    val navaid: Navaid,
+    val distanceNauticalMiles: Double,
+    val initialBearingDegrees: Double
+)
+
+data class WaypointDistance(
+    val waypoint: Waypoint,
+    val distanceNauticalMiles: Double,
+    val initialBearingDegrees: Double
+)
+
 object AviationGeo {
     fun greatCircleDistanceNm(from: GeoPoint, to: GeoPoint): Double {
         val lat1 = Math.toRadians(from.latitude)
@@ -47,3 +59,5 @@ object AviationGeo {
 }
 
 fun Airport.geoPoint(): GeoPoint = GeoPoint(latitude, longitude)
+fun Navaid.geoPoint(): GeoPoint = GeoPoint(latitude, longitude)
+fun Waypoint.geoPoint(): GeoPoint = GeoPoint(latitude, longitude)
