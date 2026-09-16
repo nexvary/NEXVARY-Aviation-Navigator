@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.fetchSemanticsNode
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -74,6 +75,22 @@ class UiReleaseGateTest {
                 .assertIsDisplayed()
                 .assertHasClickAction()
         }
+    }
+
+    @Test
+    fun flightPlanValidationButtonActuallyChangesThePageState() {
+        composeRule.onNodeWithTag("nav_PLAN")
+            .assertHasClickAction()
+            .performClick()
+        composeRule.onNodeWithTag("page_PLAN").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("validate_plan_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .performClick()
+
+        composeRule.onNodeWithText("Plan valid").assertIsDisplayed()
     }
 
     private fun overlaps(a: Rect, b: Rect): Boolean =
