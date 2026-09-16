@@ -24,8 +24,48 @@ class NavigationRepositoryTest {
         assertTrue(repository.searchAirports("alexandria").any { it.normalizedIcao == "HEBA" })
     }
 
+    @Test
+    fun nearestAirportsAreDistanceSorted() {
+        val results = repository.nearestAirports(
+            latitude = 30.0444,
+            longitude = 31.2357,
+            limit = 3
+        )
+
+        assertEquals(3, results.size)
+        assertEquals("HECA", results.first().airport.normalizedIcao)
+        assertTrue(results.first().distanceNauticalMiles < 10.0)
+        assertTrue(results.zipWithNext().all { (a, b) -> a.distanceNauticalMiles <= b.distanceNauticalMiles })
+    }
+
+    @Test
+    fun nearestAirportsRespectMaximumDistance() {
+        val results = repository.nearestAirports(
+            latitude = 30.0444,
+            longitude = 31.2357,
+            limit = 10,
+            maxDistanceNauticalMiles = 20.0
+        )
+
+        assertEquals(listOf("HECA"), results.map { it.airport.normalizedIcao })
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun searchRejectsNonPositiveLimit() {
         repository.searchAirports("cairo", 0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun nearestSearchRejectsInvalidLatitude() {
+        repository.nearestAirports(latitude = 91.0, longitude = 31.0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun nearestSearchRejectsNegativeRadius() {
+        repository.nearestAirports(
+            latitude = 30.0,
+            longitude = 31.0,
+            maxDistanceNauticalMiles = -1.0
+        )
     }
 }

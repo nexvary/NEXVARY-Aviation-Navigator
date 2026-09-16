@@ -1,11 +1,21 @@
 package com.nexvary.aviationnavigator.data
 
 import com.nexvary.aviationnavigator.domain.Airport
+import com.nexvary.aviationnavigator.domain.AirportDistance
+import com.nexvary.aviationnavigator.domain.AviationGeo
+import com.nexvary.aviationnavigator.domain.GeoPoint
+import com.nexvary.aviationnavigator.domain.geoPoint
 
 interface NavigationRepository {
     fun airports(): List<Airport>
     fun airportByIcao(icao: String): Airport?
     fun searchAirports(query: String, limit: Int = 20): List<Airport>
+    fun nearestAirports(
+        latitude: Double,
+        longitude: Double,
+        limit: Int = 10,
+        maxDistanceNauticalMiles: Double? = null
+    ): List<AirportDistance>
 }
 
 class InMemoryNavigationRepository(
@@ -45,6 +55,38 @@ class InMemoryNavigationRepository(
                     }
                 }.thenBy { it.normalizedIcao }
             )
+            .take(limit)
+            .toList()
+    }
+
+    override fun nearestAirports(
+        latitude: Double,
+        longitude: Double,
+        limit: Int,
+        maxDistanceNauticalMiles: Double?
+    ): List<AirportDistance> {
+        require(limit > 0) { "limit must be positive" }
+        if (maxDistanceNauticalMiles != null) {
+            require(maxDistanceNauticalMiles.isFinite() && maxDistanceNauticalMiles >= 0.0) {
+                "maxDistanceNauticalMiles must be finite and non-negative"
+            }
+        }
+
+        val origin = GeoPoint(latitude, longitude)
+        return airportList
+            .asSequence()
+            .map { airport ->
+                val point = airport.geoPoint()
+                AirportDistance(
+                    airport = airport,
+                    distanceNauticalMiles = AviationGeo.greatCircleDistanceNm(origin, point),
+                    initialBearingDegrees = AviationGeo.initialBearingDegrees(origin, point)
+                )
+            }
+            .filter { result ->
+                maxDistanceNauticalMiles == null || result.distanceNauticalMiles <= maxDistanceNauticalMiles
+            }
+            .sortedWith(compareBy<AirportDistance> { it.distanceNauticalMiles }.thenBy { it.airport.normalizedIcao })
             .take(limit)
             .toList()
     }
