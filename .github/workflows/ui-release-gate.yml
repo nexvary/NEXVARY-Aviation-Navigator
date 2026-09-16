@@ -1,0 +1,81 @@
+name: UI Release Gate
+
+on:
+  push:
+    branches:
+      - main
+      - 'dev/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  navigation-integrity-gate:
+    name: Navigation Integrity Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK build dependencies
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Compile UI and instrumentation tests
+        run: gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+
+      - name: Run UI Release Gate and Navigation Integrity Gate
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            gradle --no-daemon :app:connectedDebugAndroidTest --stacktrace
+            adb shell am force-stop com.nexvary.aviationnavigator
+            adb shell am start -W -n com.nexvary.aviationnavigator/.MainActivity
+            sleep 5
+            mkdir -p gate-artifacts
+            adb exec-out screencap -p > gate-artifacts/ui-release-gate-home.png
+            test -s gate-artifacts/ui-release-gate-home.png
+
+      - name: Upload UI gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXVARY-Aviation-Navigator-UI-Release-Gate
+          path: |
+            gate-artifacts/
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: warn
