@@ -20,18 +20,28 @@ The project is designed as a mobile aviation workspace rather than a simple airc
 
 ## Current 0.3.0 development line
 
-0.3.0 starts the navigation-data and route-engine layer on top of the verified 0.2.0 application. The first slice adds:
+0.3.0 builds the navigation-data and route-engine layer on top of the verified 0.2.0 application. The current slice includes:
 
 - Provider-independent `NavigationRepository` contract
 - Normalized airport model with ICAO/IATA identity, position and elevation
-- Case-insensitive airport lookup and search
-- Small bundled Egypt airport seed for development and offline architecture verification
-- Direct great-circle route engine with nautical-mile distance and initial bearing
-- Optional cruise-speed ETA calculation
-- Explicit route failures for unknown/same airports and invalid cruise speed
-- Unit tests covering airport search, lookup and HECA → HESH route metrics
+- Runway model with airport association, dimensions, surface and heading metadata
+- Navaid model with VOR/VOR-DME/DME/NDB types, frequency and normalized identifiers
+- Waypoint/fix model and airway model with ordered fix membership and altitude bounds
+- Case-insensitive search and lookup for airports, navaids, waypoints and airways
+- Distance-sorted nearest-airport, nearest-navaid and nearest-waypoint queries
+- Shared great-circle distance and initial-bearing geometry
+- Generic fix resolution across airports, navaids and waypoints
+- Direct route engine with nautical-mile distance, bearing and optional cruise-speed ETA
+- Airway-aware `RoutePlanner` capable of forward and reverse airway traversal and intermediate-fix expansion
+- Structured route failures for unknown fixes/airways, invalid airway entry/exit and invalid speed
+- Cumulative route-progress metrics with leg, flown and remaining distance
+- Route GeoJSON serialization for future MapLibre route overlay integration
+- Aircraft performance profiles with trip-time, trip-fuel and reserve-fuel estimates
+- `FlightPlanningService` joining draft validation, route resolution, performance estimates, progress metrics and GeoJSON output
+- Deterministic navigation fixtures and unit tests covering the repository, route expansion, failures, performance and GeoJSON
+- Small bundled Egypt airport seed retained only for development/offline architecture verification
 
-The bundled seed is intentionally small and informational. Production/global navigation data remains behind the repository boundary so licensed or open datasets can be substituted without coupling the UI to one supplier.
+The bundled airport seed is intentionally small and informational. Production/global navigation data remains behind the repository boundary so licensed or open datasets can be substituted without coupling the UI to one supplier. Operational runway, navaid, airway, chart and procedure datasets must come from a reviewed source with appropriate usage and redistribution rights.
 
 ## Verified 0.2.0 application
 
@@ -60,7 +70,7 @@ The verified release includes:
 
 ## Architecture
 
-The Android client consumes normalized aviation-data models instead of depending directly on one provider. Live traffic and aeronautical navigation data have separate repository boundaries. Initial traffic adapters target ADSB.lol and OpenSky Network; navigation data starts behind `NavigationRepository`. A later gateway service will handle provider aggregation, deduplication, caching and secret-bearing commercial APIs.
+The Android client consumes normalized aviation-data models instead of depending directly on one provider. Live traffic and aeronautical navigation data have separate repository boundaries. Initial traffic adapters target ADSB.lol and OpenSky Network; navigation data lives behind `NavigationRepository`. A later gateway service will handle provider aggregation, deduplication, caching and secret-bearing commercial APIs.
 
 ```text
 ADSB.lol ───────┐
@@ -68,6 +78,10 @@ OpenSky ────────┼──> Provider adapters ──> Normalized 
 Future APIs ────┘                         │
                                          ├── Live Map
 Navigation DB ──> NavigationRepository ───┼── Flight Planner / Route Engine
+                                         │        │
+                                         │        ├── Route metrics / ETA
+                                         │        ├── Fuel + reserve estimate
+                                         │        └── Route GeoJSON
 Weather ──────────────────────────────────┼── Radar
 Simulator bridge ─────────────────────────┴── Navigation
 ```
