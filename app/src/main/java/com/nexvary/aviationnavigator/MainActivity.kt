@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -72,58 +71,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MapLibre.getInstance(this)
-
         setContent {
             NexvaryAviationTheme {
-                AviationNavigatorApp(
-                    onMapViewReady = { mapView = it }
-                )
+                AviationNavigatorApp(onMapViewReady = { mapView = it })
             }
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        mapView?.onStart()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        mapView?.onResume()
-    }
-
-    override fun onPause() {
-        mapView?.onPause()
-        super.onPause()
-    }
-
-    override fun onStop() {
-        mapView?.onStop()
-        super.onStop()
-    }
-
-    override fun onLowMemory() {
-        super.onLowMemory()
-        mapView?.onLowMemory()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        mapView?.onSaveInstanceState(outState)
-    }
-
-    override fun onDestroy() {
-        mapView?.onDestroy()
-        mapView = null
-        super.onDestroy()
-    }
+    override fun onStart() { super.onStart(); mapView?.onStart() }
+    override fun onResume() { super.onResume(); mapView?.onResume() }
+    override fun onPause() { mapView?.onPause(); super.onPause() }
+    override fun onStop() { mapView?.onStop(); super.onStop() }
+    override fun onLowMemory() { super.onLowMemory(); mapView?.onLowMemory() }
+    override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); mapView?.onSaveInstanceState(outState) }
+    override fun onDestroy() { mapView?.onDestroy(); mapView = null; super.onDestroy() }
 }
 
 private enum class AppSection(val label: String) {
-    MAP("MAP"),
-    PLAN("PLAN"),
-    RADAR("RADAR"),
-    TRAFFIC("TRAFFIC")
+    MAP("MAP"), PLAN("PLAN"), RADAR("RADAR"), TRAFFIC("TRAFFIC")
 }
 
 @Composable
@@ -139,14 +104,9 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
         if (loading) return
         scope.launch {
             loading = true
-            val result = provider.fetch(
-                TrafficQuery(
-                    centerLatitude = DEFAULT_LATITUDE,
-                    centerLongitude = DEFAULT_LONGITUDE,
-                    radiusNm = DEFAULT_RADIUS_NM
-                )
-            )
-            result.onSuccess {
+            provider.fetch(
+                TrafficQuery(DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_RADIUS_NM)
+            ).onSuccess {
                 tracks = it
                 status = "${it.size} aircraft · ADSB.lol"
             }.onFailure {
@@ -156,9 +116,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        refresh()
-    }
+    LaunchedEffect(Unit) { refresh() }
 
     Scaffold(
         containerColor = AppBlack,
@@ -170,7 +128,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
                         onClick = { selected = section },
                         icon = {
                             Text(
-                                text = section.label.take(1),
+                                section.label.take(1),
                                 color = if (selected == section) RoyalGold else MetallicSilver,
                                 fontWeight = FontWeight.Bold
                             )
@@ -192,18 +150,9 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
                 .padding(padding)
                 .background(AppBlack)
         ) {
-            StatusHeader(
-                status = status,
-                loading = loading,
-                onRefresh = ::refresh
-            )
-
+            StatusHeader(status, loading, ::refresh)
             when (selected) {
-                AppSection.MAP -> LiveMapScreen(
-                    modifier = Modifier.weight(1f),
-                    tracks = tracks,
-                    onMapViewReady = onMapViewReady
-                )
+                AppSection.MAP -> LiveMapScreen(Modifier.weight(1f), tracks, onMapViewReady)
                 AppSection.PLAN -> FlightPlanScreen(Modifier.weight(1f))
                 AppSection.RADAR -> RadarScreen(Modifier.weight(1f), tracks)
                 AppSection.TRAFFIC -> TrafficScreen(Modifier.weight(1f), tracks)
@@ -223,18 +172,13 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "NEXVARY AVIATION NAVIGATOR",
+                "NEXVARY AVIATION NAVIGATOR",
                 color = RoyalGold,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = status,
-                color = Platinum,
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(status, color = Platinum, style = MaterialTheme.typography.bodySmall)
         }
-
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(26.dp),
@@ -248,9 +192,7 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
                     containerColor = RoyalGold,
                     contentColor = Color.Black
                 )
-            ) {
-                Text("REFRESH", fontWeight = FontWeight.Bold)
-            }
+            ) { Text("REFRESH", fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -262,15 +204,9 @@ private fun LiveMapScreen(
     onMapViewReady: (MapView) -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        MapLibreSurface(
-            modifier = Modifier.fillMaxSize(),
-            onMapViewReady = onMapViewReady
-        )
-
+        MapLibreSurface(Modifier.fillMaxSize(), onMapViewReady)
         Card(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp),
+            modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
             colors = CardDefaults.cardColors(containerColor = PanelBlack.copy(alpha = 0.92f)),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -285,10 +221,7 @@ private fun LiveMapScreen(
 }
 
 @Composable
-private fun MapLibreSurface(
-    modifier: Modifier,
-    onMapViewReady: (MapView) -> Unit
-) {
+private fun MapLibreSurface(modifier: Modifier, onMapViewReady: (MapView) -> Unit) {
     val context = LocalContext.current
     val mapView = remember {
         MapView(context).apply {
@@ -303,19 +236,13 @@ private fun MapLibreSurface(
             onMapViewReady(this)
         }
     }
-
-    AndroidView(
-        factory = { mapView },
-        modifier = modifier
-    )
+    AndroidView(factory = { mapView }, modifier = modifier)
 }
 
 @Composable
 private fun FlightPlanScreen(modifier: Modifier) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionTitle("FLIGHT PLANNER")
@@ -332,26 +259,15 @@ private fun FlightPlanScreen(modifier: Modifier) {
 
 @Composable
 private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         SectionTitle("LIVE RADAR · $DEFAULT_RADIUS_NM NM")
         Spacer(Modifier.height(12.dp))
-
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             color = Color(0xFF050A08),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(18.dp)
-            ) {
+            Canvas(Modifier.fillMaxSize().padding(18.dp)) {
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val maxRadius = minOf(size.width, size.height) * 0.46f
                 val ringColor = Color(0xFF315845)
@@ -365,7 +281,6 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
                         style = Stroke(width = 1.2f)
                     )
                 }
-
                 drawLine(ringColor, Offset(center.x, center.y - maxRadius), Offset(center.x, center.y + maxRadius), 1f)
                 drawLine(ringColor, Offset(center.x - maxRadius, center.y), Offset(center.x + maxRadius, center.y), 1f)
                 drawLine(sweepColor, center, Offset(center.x + maxRadius * 0.78f, center.y - maxRadius * 0.62f), 2f)
@@ -376,8 +291,8 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
                     val eastNm = (aircraft.longitude - DEFAULT_LONGITUDE) * 60.0 * longitudeScale
                     val x = center.x + (eastNm / DEFAULT_RADIUS_NM * maxRadius).toFloat()
                     val y = center.y - (northNm / DEFAULT_RADIUS_NM * maxRadius).toFloat()
-
-                    if (x in (center.x - maxRadius)..(center.x + maxRadius) &&
+                    if (
+                        x in (center.x - maxRadius)..(center.x + maxRadius) &&
                         y in (center.y - maxRadius)..(center.y + maxRadius)
                     ) {
                         drawCircle(
@@ -389,7 +304,6 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
                 }
             }
         }
-
         Spacer(Modifier.height(8.dp))
         Text(
             "Gold: airborne · Silver: ground · ${tracks.size} live tracks",
@@ -404,13 +318,12 @@ private fun TrafficScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
     Column(modifier = modifier.fillMaxSize()) {
         SectionTitle("LIVE TRAFFIC", Modifier.padding(16.dp))
         HorizontalDivider(color = Gunmetal)
-
         if (tracks.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No live tracks loaded", color = MetallicSilver)
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize()) {
                 items(tracks.take(250), key = { it.icao24 }) { aircraft ->
                     AircraftRow(aircraft)
                     HorizontalDivider(color = Gunmetal.copy(alpha = 0.55f))
@@ -423,9 +336,7 @@ private fun TrafficScreen(modifier: Modifier, tracks: List<AircraftTrack>) {
 @Composable
 private fun AircraftRow(track: AircraftTrack) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -460,7 +371,7 @@ private fun FeatureCard(title: String, subtitle: String) {
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
-        text = text,
+        text,
         modifier = modifier,
         color = RoyalGold,
         style = MaterialTheme.typography.titleLarge,
