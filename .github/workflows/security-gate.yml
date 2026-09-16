@@ -38,7 +38,7 @@ jobs:
           gradle-version: '9.6.0'
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
 
@@ -46,4 +46,4 @@ jobs:
         run: gradle --no-daemon :app:lintDebug :app:testDebugUnitTest :app:assembleDebug --stacktrace
 
       - name: Analyze with CodeQL
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
