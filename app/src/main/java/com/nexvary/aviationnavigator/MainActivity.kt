@@ -231,13 +231,16 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
                     color = RoyalGold,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start
+                    textAlign = TextAlign.Start,
+                    maxLines = 1
                 )
                 Text(
                     status,
                     modifier = Modifier.fillMaxWidth(),
                     color = Platinum,
-                    textAlign = TextAlign.Start
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1
                 )
             }
             Spacer(Modifier.width(8.dp))
@@ -282,7 +285,7 @@ private fun DashboardScreen(
             .testTag("page_HOME")
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             uiText(UiText.WORKSPACE),
@@ -296,37 +299,36 @@ private fun DashboardScreen(
             uiText(UiText.WORKSPACE_SUBTITLE),
             modifier = Modifier.fillMaxWidth(),
             color = MetallicSilver,
+            style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Start
         )
 
         ResponsiveStats(tracks.size, airborne, ground)
 
-        if (highest != null || fastest != null) {
-            AccentCard(NeonViolet) {
-                Text(
-                    uiText(UiText.LIVE_HIGHLIGHTS),
-                    modifier = Modifier.fillMaxWidth(),
-                    color = NeonViolet,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start
-                )
-                highest?.let {
-                    Text(
-                        uiText(UiText.HIGHEST, it.displayIdentity, it.altitudeFeet ?: 0),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Platinum,
-                        textAlign = TextAlign.Start
-                    )
-                }
-                fastest?.let {
-                    Text(
-                        uiText(UiText.FASTEST, it.displayIdentity, it.groundSpeedKnots ?: 0),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Platinum,
-                        textAlign = TextAlign.Start
-                    )
-                }
-            }
+        AccentCard(NeonViolet) {
+            Text(
+                uiText(UiText.LIVE_HIGHLIGHTS),
+                modifier = Modifier.fillMaxWidth(),
+                color = NeonViolet,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            )
+            Text(
+                highest?.let { uiText(UiText.HIGHEST, it.displayIdentity, it.altitudeFeet ?: 0) } ?: "—",
+                modifier = Modifier.fillMaxWidth(),
+                color = Platinum,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Start,
+                maxLines = 1
+            )
+            Text(
+                fastest?.let { uiText(UiText.FASTEST, it.displayIdentity, it.groundSpeedKnots ?: 0) } ?: "—",
+                modifier = Modifier.fillMaxWidth(),
+                color = Platinum,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Start,
+                maxLines = 1
+            )
         }
 
         Text(
@@ -376,6 +378,7 @@ private fun StatCard(label: UiText, value: String, accent: Color, modifier: Modi
                 uiText(label),
                 modifier = Modifier.fillMaxWidth(),
                 color = MetallicSilver,
+                style = MaterialTheme.typography.labelSmall,
                 textAlign = TextAlign.Start
             )
             Text(
@@ -406,32 +409,41 @@ private fun QuickAction(
         shape = RoundedCornerShape(14.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 section.icon,
                 contentDescription = null,
                 tint = accent,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     uiText(title),
                     modifier = Modifier.fillMaxWidth(),
                     color = Platinum,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start
+                    textAlign = TextAlign.Start,
+                    maxLines = 1
                 )
                 Text(
                     uiText(subtitle),
                     modifier = Modifier.fillMaxWidth(),
                     color = MetallicSilver,
-                    textAlign = TextAlign.Start
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1
                 )
             }
-            Text(uiText(UiText.OPEN), color = accent, fontWeight = FontWeight.Bold)
+            Text(
+                uiText(UiText.OPEN),
+                color = accent,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
         }
     }
 }
