@@ -18,9 +18,24 @@ The project is designed as a mobile aviation workspace rather than a simple airc
 - Simulator connectivity for MSFS / X-Plane
 - Offline-capable map/navigation layers where licensing permits
 
-## Current 0.2.0 application
+## Current 0.3.0 development line
 
-The current development line includes:
+0.3.0 starts the navigation-data and route-engine layer on top of the verified 0.2.0 application. The first slice adds:
+
+- Provider-independent `NavigationRepository` contract
+- Normalized airport model with ICAO/IATA identity, position and elevation
+- Case-insensitive airport lookup and search
+- Small bundled Egypt airport seed for development and offline architecture verification
+- Direct great-circle route engine with nautical-mile distance and initial bearing
+- Optional cruise-speed ETA calculation
+- Explicit route failures for unknown/same airports and invalid cruise speed
+- Unit tests covering airport search, lookup and HECA → HESH route metrics
+
+The bundled seed is intentionally small and informational. Production/global navigation data remains behind the repository boundary so licensed or open datasets can be substituted without coupling the UI to one supplier.
+
+## Verified 0.2.0 application
+
+The verified release includes:
 
 - Jetpack Compose Android application
 - Deep-black metallic UI using royal gold, electric blue, neon green, violet and silver accents
@@ -45,14 +60,14 @@ The current development line includes:
 
 ## Architecture
 
-The Android client consumes a normalized aviation-data model instead of depending directly on one provider. Initial traffic adapters target ADSB.lol and OpenSky Network. A later gateway service will handle provider aggregation, deduplication, caching and secret-bearing commercial APIs.
+The Android client consumes normalized aviation-data models instead of depending directly on one provider. Live traffic and aeronautical navigation data have separate repository boundaries. Initial traffic adapters target ADSB.lol and OpenSky Network; navigation data starts behind `NavigationRepository`. A later gateway service will handle provider aggregation, deduplication, caching and secret-bearing commercial APIs.
 
 ```text
 ADSB.lol ───────┐
 OpenSky ────────┼──> Provider adapters ──> Normalized traffic model ──> Android UI
 Future APIs ────┘                         │
                                          ├── Live Map
-Navigation DB ────────────────────────────┼── Flight Planner
+Navigation DB ──> NavigationRepository ───┼── Flight Planner / Route Engine
 Weather ──────────────────────────────────┼── Radar
 Simulator bridge ─────────────────────────┴── Navigation
 ```
