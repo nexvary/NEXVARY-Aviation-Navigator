@@ -18,6 +18,31 @@ The project is designed as a mobile aviation workspace rather than a simple airc
 - Simulator connectivity for MSFS / X-Plane
 - Offline-capable map/navigation layers where licensing permits
 
+## Current 0.2.0 application
+
+The current development line includes:
+
+- Jetpack Compose Android application
+- Deep-black metallic UI using royal gold, electric blue, neon green, violet and silver accents
+- Responsive phone layout with non-overlapping Material navigation icons
+- Home dashboard with tracked, airborne and ground traffic statistics
+- MapLibre map with live ADS-B aircraft GeoJSON layer
+- Live ADSB.lol provider adapter
+- OpenSky provider adapter behind a common contract
+- Normalized `AircraftTrack` model
+- Multi-provider repository with ICAO24 deduplication logic
+- Live radar view
+- Live traffic list with callsign, altitude and speed
+- Functional flight-plan draft form with ICAO and altitude validation
+- Dedicated About page with NEXVARY website, Facebook, email, YouTube and X links
+- Visible in-app Back control on every secondary page plus Android Back handling
+- Arabic, English, Turkish, Spanish, German, Italian, French, Urdu, Persian and Russian UI support
+- Explicit RTL layout handling for Arabic, Urdu and Persian
+- Dedicated aviation/radar launcher icon
+- UI Release Gate and Navigation Integrity Gate for dead-button/disconnected-page regressions
+- Android Lint + CodeQL security release gate
+- GitHub Actions debug APK and real-emulator screenshot artifacts
+
 ## Architecture
 
 The Android client consumes a normalized aviation-data model instead of depending directly on one provider. Initial traffic adapters target ADSB.lol and OpenSky Network. A later gateway service will handle provider aggregation, deduplication, caching and secret-bearing commercial APIs.
@@ -32,6 +57,8 @@ Weather ────────────────────────
 Simulator bridge ─────────────────────────┴── Navigation
 ```
 
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for design boundaries and [`docs/RELEASE_GATES.md`](docs/RELEASE_GATES.md) for the release verification contract.
+
 ## Data-source principles
 
 - ADSB.lol: initial open live-traffic source; its open API/data is licensed separately by its provider.
@@ -43,15 +70,20 @@ Simulator bridge ─────────────────────
 
 NEXVARY Aviation Navigator is an informational, planning, simulation and situational-awareness application. It is **not certified for real-world primary navigation, ATC separation, collision avoidance, or safety-of-life use**.
 
-## Initial development line
+## Build and verification
 
-`0.1.x` establishes the Android foundation, normalized aircraft model, provider abstraction, live map shell, flight-planner shell, radar shell and automated build gate.
-
-## Build
-
-The project targets JDK 17, Android Gradle Plugin 9.4.x, Kotlin 2.4.x and Gradle 9.6.x.
+The project targets JDK 17, Android Gradle Plugin 9.4.x, Kotlin 2.4.x, Android API 36 and Gradle 9.6.x.
 
 ```bash
-./gradlew :app:assembleDebug
-./gradlew :app:testDebugUnitTest
+gradle :app:assembleDebug
+gradle :app:testDebugUnitTest
+gradle :app:lintDebug
 ```
+
+The emulator release gate additionally runs:
+
+```bash
+gradle :app:connectedDebugAndroidTest
+```
+
+A debug APK is uploaded only after the build job succeeds. UI gate evidence is captured from the actual APK running on an Android emulator.
