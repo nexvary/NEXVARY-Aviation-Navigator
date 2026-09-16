@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.nexvary.aviationnavigator"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.nexvary.aviationnavigator"
@@ -49,7 +49,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
+    // Compose 1.11 is the newest stable line that remains compatible with compileSdk 36.
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
