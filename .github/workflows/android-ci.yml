@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'dev/**'
+      - 'ci/**'
   pull_request:
     branches:
       - main
@@ -20,7 +21,7 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -31,22 +32,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
 
-      - name: Install Android SDK platform
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Install required Android SDK packages
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
 
       - name: Set up Gradle 9.6
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+          cache-read-only: false
 
       - name: Build, unit test and lint
-        run: gradle --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+        run: gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --parallel --configuration-cache --build-cache --stacktrace
 
       - name: Upload debug APK
         if: success()
@@ -55,3 +56,4 @@ jobs:
           name: NEXVARY-Aviation-Navigator-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          compression-level: 0
