@@ -46,6 +46,8 @@ This boundary allows traffic providers to be added, removed or degraded without 
 
 MapLibre owns the geographic rendering surface. Live tracks are serialized into a GeoJSON `FeatureCollection` and stored in a `GeoJsonSource`. The source is updated in place when a new traffic snapshot arrives, avoiding map reconstruction. A dedicated layer renders the points above the base style.
 
+The route stack now exposes `RouteGeoJson.featureCollection(...)`, giving the UI a provider-independent line/leg representation that can be connected to a dedicated MapLibre source without coupling route computation to rendering.
+
 Future map work should evolve this into:
 
 - aircraft-shaped symbols rotated by track
@@ -76,27 +78,42 @@ The gateway should eventually provide caching, rate limiting, credentials isolat
 
 ## Navigation data boundary
 
-Live traffic feeds must remain separate from aeronautical navigation data. A navigation repository will later own:
+Live traffic feeds remain separate from aeronautical navigation data. `NavigationRepository` now owns normalized access to:
 
 - airports
 - runways
-- parking/gates where licensed
-- VOR / DME / NDB
+- VOR / VOR-DME / DME / NDB navaids
 - fixes and waypoints
-- airways
-- FIR / CTR / TMA and other airspace
-- SID / STAR / approaches where data rights permit
-- elevation/terrain metadata
+- airways with ordered fix membership and optional altitude bounds
 
-The route engine should operate against the navigation repository, not the live-traffic provider layer.
+The repository provides case-insensitive lookup/search, nearest-object queries using shared geodesic calculations, runway grouping by airport and generic fix resolution across airport/navaid/waypoint identities.
 
-## Planned route engine
+Parking/gates, FIR/CTR/TMA, SID/STAR/approach data and terrain/elevation datasets remain future repository extensions where data rights permit.
 
-The planner will evolve from a workspace shell into a graph-based routing engine capable of representing:
+## Route engine
+
+The route layer is split into four responsibilities:
+
+1. `RouteSyntax` normalizes free-form route text into route tokens.
+2. `RoutePlanner` resolves direct fixes and airway segments against `NavigationRepository`.
+3. `RouteMetrics` produces cumulative and remaining distance at every route point.
+4. `RouteGeoJson` converts a resolved route to rendering-ready GeoJSON.
+
+The airway resolver supports forward and reverse traversal through ordered airway fixes and expands intermediate fixes. Failures are structured as typed reasons rather than opaque strings, including unknown fixes/airways and invalid airway entry/exit.
+
+Current route shape:
+
+`Departure → direct fix → airway fixes → direct fix → Destination`
+
+The next structural evolution is:
 
 `Departure → SID → airway/fixes → STAR → approach → destination`
 
-Later layers will add aircraft-performance profiles, fuel/time calculations, TOC/TOD, altitude constraints and a vertical profile.
+## Flight planning and performance
+
+`FlightPlanningService` now composes draft validation, route resolution, route metrics, GeoJSON and a first aircraft-performance estimate. `AircraftPerformanceProfile` supplies cruise speed, hourly fuel burn and reserve minutes. `FlightEstimateEngine` returns airborne time, trip fuel, reserve fuel and total fuel.
+
+This is deliberately a simple planning estimate, not a certified flight-management or dispatch calculation. Later performance work can add climb/descent profiles, winds, altitude constraints, TOC/TOD and vertical-profile rendering without changing the navigation repository boundary.
 
 ## Weather and simulation
 
@@ -113,6 +130,7 @@ Local persistence should use Room/SQLite for user plans, cached metadata, aircra
 - Keep provider parsing isolated from UI code.
 - Validate external values before they enter navigation or rendering models.
 - Treat downloaded navigation datasets as untrusted input.
+- Keep operational navigation datasets replaceable behind `NavigationRepository` rather than baking supplier-specific assumptions into the UI.
 
 ## Safety
 
