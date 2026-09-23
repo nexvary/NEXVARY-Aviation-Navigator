@@ -33,7 +33,7 @@ class AdsbLolProvider(
                 connectTimeout = 10_000
                 readTimeout = 15_000
                 setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "NEXVARY-Aviation-Navigator/0.1")
+                setRequestProperty("User-Agent", "NEXVARY-Aviation-Navigator/0.3")
             }
 
             try {
