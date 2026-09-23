@@ -73,6 +73,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -696,6 +698,7 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val maxRadius = minOf(size.width, size.height) * 0.46f
 
+                // PPI range rings and azimuth spokes
                 repeat(4) { ring ->
                     drawCircle(
                         color = NeonGreen.copy(alpha = 0.42f),
@@ -706,7 +709,13 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                 }
                 drawLine(NeonGreen.copy(alpha = 0.38f), Offset(center.x, center.y - maxRadius), Offset(center.x, center.y + maxRadius), 1f)
                 drawLine(NeonGreen.copy(alpha = 0.38f), Offset(center.x - maxRadius, center.y), Offset(center.x + maxRadius, center.y), 1f)
-                drawLine(ElectricBlue, center, Offset(center.x + maxRadius * 0.78f, center.y - maxRadius * 0.62f), 2f)
+                for (angle in 0 until 360 step 30) {
+                    val radians = Math.toRadians(angle.toDouble())
+                    val edge = Offset(center.x + (kotlin.math.sin(radians) * maxRadius).toFloat(), center.y - (kotlin.math.cos(radians) * maxRadius).toFloat())
+                    drawLine(NeonGreen.copy(alpha = 0.16f), center, edge, 0.8f)
+                }
+                drawCircle(ElectricBlue.copy(alpha = 0.12f), maxRadius * 0.98f, center)
+                drawLine(ElectricBlue.copy(alpha = 0.9f), center, Offset(center.x + maxRadius * 0.72f, center.y - maxRadius * 0.69f), 2.4f)
 
                 val longitudeScale = cos(Math.toRadians(DEFAULT_LATITUDE))
                 tracks.take(150).forEach { aircraft ->
@@ -718,11 +727,18 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                         x in (center.x - maxRadius)..(center.x + maxRadius) &&
                         y in (center.y - maxRadius)..(center.y + maxRadius)
                     ) {
-                        drawCircle(
-                            color = if (aircraft.onGround) MetallicSilver else RoyalGold,
-                            radius = if (aircraft.onGround) 3.5f else 5.5f,
-                            center = Offset(x, y)
-                        )
+                        val targetColor = if (aircraft.onGround) MetallicSilver else RoyalGold
+                        if (aircraft.onGround) {
+                            drawCircle(targetColor, 4f, Offset(x, y))
+                        } else {
+                            val heading = (aircraft.trackDegrees ?: 0.0).toFloat()
+                            rotate(heading, Offset(x, y)) {
+                                val p = Path().apply {
+                                    moveTo(x, y - 8f); lineTo(x - 5f, y + 6f); lineTo(x, y + 3f); lineTo(x + 5f, y + 6f); close()
+                                }
+                                drawPath(p, targetColor)
+                            }
+                        }
                     }
                 }
             }
