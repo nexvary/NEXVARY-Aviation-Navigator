@@ -52,6 +52,8 @@ android {
 
 dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
