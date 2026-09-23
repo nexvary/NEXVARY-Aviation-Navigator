@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Map
@@ -227,6 +228,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
 
 @Composable
 private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit) {
+    var languageMenu by remember { mutableStateOf(false) }
     Surface(
         color = PanelBlack,
         border = BorderStroke(1.dp, RoyalGold.copy(alpha = 0.45f))
@@ -255,6 +257,16 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
                 )
             }
             Spacer(Modifier.width(8.dp))
+            Box {
+                IconButton(modifier = Modifier.testTag("language_button"), onClick = { languageMenu = !languageMenu }) {
+                    Icon(Icons.Outlined.Language, contentDescription = "Language", tint = RoyalGold)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                    listOf("ar" to "العربية", "en" to "English", "tr" to "Türkçe", "es" to "Español", "de" to "Deutsch", "it" to "Italiano", "fr" to "Français", "ur" to "اردو", "fa" to "فارسی", "ru" to "Русский").forEach { (code, label) ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(label) }, onClick = { languageMenu = false; setApplicationLanguage(code) })
+                    }
+                }
+            }
             if (loading) {
                 CircularProgressIndicator(
                     progress = { 0.72f },
