@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Map
@@ -72,6 +73,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -227,6 +230,7 @@ private fun AviationNavigatorApp(onMapViewReady: (MapView) -> Unit) {
 
 @Composable
 private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit) {
+    var languageMenu by remember { mutableStateOf(false) }
     Surface(
         color = PanelBlack,
         border = BorderStroke(1.dp, RoyalGold.copy(alpha = 0.45f))
@@ -255,6 +259,16 @@ private fun StatusHeader(status: String, loading: Boolean, onRefresh: () -> Unit
                 )
             }
             Spacer(Modifier.width(8.dp))
+            Box {
+                IconButton(modifier = Modifier.testTag("language_button"), onClick = { languageMenu = !languageMenu }) {
+                    Icon(Icons.Outlined.Language, contentDescription = "Language", tint = RoyalGold)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                    listOf("ar" to "العربية", "en" to "English", "tr" to "Türkçe", "es" to "Español", "de" to "Deutsch", "it" to "Italiano", "fr" to "Français", "ur" to "اردو", "fa" to "فارسی", "ru" to "Русский").forEach { (code, label) ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(label) }, onClick = { languageMenu = false; setApplicationLanguage(code) })
+                    }
+                }
+            }
             if (loading) {
                 CircularProgressIndicator(
                     progress = { 0.72f },
@@ -684,6 +698,7 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val maxRadius = minOf(size.width, size.height) * 0.46f
 
+                // PPI range rings and azimuth spokes
                 repeat(4) { ring ->
                     drawCircle(
                         color = NeonGreen.copy(alpha = 0.42f),
@@ -694,7 +709,13 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                 }
                 drawLine(NeonGreen.copy(alpha = 0.38f), Offset(center.x, center.y - maxRadius), Offset(center.x, center.y + maxRadius), 1f)
                 drawLine(NeonGreen.copy(alpha = 0.38f), Offset(center.x - maxRadius, center.y), Offset(center.x + maxRadius, center.y), 1f)
-                drawLine(ElectricBlue, center, Offset(center.x + maxRadius * 0.78f, center.y - maxRadius * 0.62f), 2f)
+                for (angle in 0 until 360 step 30) {
+                    val radians = Math.toRadians(angle.toDouble())
+                    val edge = Offset(center.x + (kotlin.math.sin(radians) * maxRadius).toFloat(), center.y - (kotlin.math.cos(radians) * maxRadius).toFloat())
+                    drawLine(NeonGreen.copy(alpha = 0.16f), center, edge, 0.8f)
+                }
+                drawCircle(ElectricBlue.copy(alpha = 0.12f), maxRadius * 0.98f, center)
+                drawLine(ElectricBlue.copy(alpha = 0.9f), center, Offset(center.x + maxRadius * 0.72f, center.y - maxRadius * 0.69f), 2.4f)
 
                 val longitudeScale = cos(Math.toRadians(DEFAULT_LATITUDE))
                 tracks.take(150).forEach { aircraft ->
@@ -706,11 +727,18 @@ private fun RadarScreen(modifier: Modifier, tracks: List<AircraftTrack>, onBack:
                         x in (center.x - maxRadius)..(center.x + maxRadius) &&
                         y in (center.y - maxRadius)..(center.y + maxRadius)
                     ) {
-                        drawCircle(
-                            color = if (aircraft.onGround) MetallicSilver else RoyalGold,
-                            radius = if (aircraft.onGround) 3.5f else 5.5f,
-                            center = Offset(x, y)
-                        )
+                        val targetColor = if (aircraft.onGround) MetallicSilver else RoyalGold
+                        if (aircraft.onGround) {
+                            drawCircle(targetColor, 4f, Offset(x, y))
+                        } else {
+                            val heading = (aircraft.trackDegrees ?: 0.0).toFloat()
+                            rotate(heading, Offset(x, y)) {
+                                val p = Path().apply {
+                                    moveTo(x, y - 8f); lineTo(x - 5f, y + 6f); lineTo(x, y + 3f); lineTo(x + 5f, y + 6f); close()
+                                }
+                                drawPath(p, targetColor)
+                            }
+                        }
                     }
                 }
             }
